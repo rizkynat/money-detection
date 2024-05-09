@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Monitoring</title>
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.1/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+    integrity="sha384-+0n0xVW2eSR5OomGNYDnhzAbDsOXxcvSN1TPprVMTNDbiYZCxYbOOl7+AMvyTG2x"
+    crossorigin="anonymous"
+  >
+  <link
+    rel="stylesheet"
+    type="text/css"
+    href="https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap5.css"
+  >
+  <style>
+    #data {
+
+      table-layout: fixed;
+      word-wrap: break-word;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    table,
+    th,
+    td {
+      border: 1px solid black;
+      border-collapse: collapse;
+      max-width: 100px;
+    }
+
+    #data td:nth-child(3) {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: clip;
+    }
+  </style>
+</head>
+
+<body>
+
+  <h1>Cookies Table</h1>
+
+  <table
+    id="data"
+    class="table datatable "
+  >
+  </table>
+
+  <script
+    type="text/javascript"
+    charset="utf8"
+    src="https://code.jquery.com/jquery-3.6.0.min.js"
+  ></script>
+  <script
+    type="text/javascript"
+    charset="utf8"
+    src="https://cdn.datatables.net/1.10.25/js/jquery.dataTables.js"
+  ></script>
+  <script
+    type="text/javascript"
+    charset="utf8"
+    src="https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap5.js"
+  ></script>
+  <script>
+    $(document).ready(function () {
+      $(function () {
+        $(document).on('click', '.delete-cookie', function () {
+          let id_cookie = $(this).data('id-cookie')
+          console.log(id_cookie)
+          $.ajax({
+            url: 'http://127.0.0.1:5000/delete/' + id_cookie,
+            type: 'DELETE',
+            success: function (resp) {
+              window.location.reload()
+            },
+            error: function (err) { },
+          });
+        })
+      })
+
+      $.get('/api/cookies', function (data) {
+
+        $('#data').DataTable({
+          data: data.data,
+          pageLength: 15,
+          paging: true,
+          filter: true,
+          deferRender: true,
+          scrollY: 700,
+          scrollCollapse: true,
+          scroller: true,
+
+          columns: [
+            { "data": 0, "title": "ID" },
+            { "data": 1, "title": "URL" },
+            { "data": 2, "title": "Cookies" },
+            { "data": 3, "title": "Date" },
+            { "render": function (data, type, full) { return "" } }
+
+          ],
+
+        });
+        $('#data tr').each(function () {
+          var ID = $(this).find("td:nth-child(1)").html();
+          if (ID != undefined) {
+            $(this).find("td:nth-child(5)").replaceWith('<td><button data-id-cookie="' + ID + '"  class="delete-cookie btn btn-danger">Delete</button></td>')
+          }
+        })
+      });
+    });
+  </script>
+</body>
+</body>
+
+</html>

